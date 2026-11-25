@@ -29,6 +29,14 @@
   <label class="btn" for="photo">Dự phòng: chụp ảnh mã vạch</label>
   <input id="photo" type="file" accept="image/*" capture="environment">
 
+  <div id="qtyBox" style="display:none;margin:10px 0">
+    <div style="font-size:14px;color:#555;margin-bottom:6px">Số lượng cho lần quét tới (thùng nguyên đai: nhập số hộp trong thùng rồi quét 1 hộp)</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button type="button" id="qMinus" style="width:64px;margin:0">−</button>
+      <input id="qty" type="number" inputmode="numeric" min="1" value="1" style="flex:1;font-size:22px;padding:10px;text-align:center;border:1px solid #888;border-radius:10px">
+      <button type="button" id="qPlus" style="width:64px;margin:0">+</button>
+    </div>
+  </div>
   <div id="reader"></div>
   <div id="out">Chưa quét.</div>
   <div id="list"></div>
@@ -41,8 +49,13 @@
   const CH = new URLSearchParams(location.search).get('ch') || '';
   if (CH) {
     document.querySelector('h3').textContent = 'SBH – máy quét cho app';
-    document.querySelector('p').textContent = 'Mỗi mã quét được sẽ hiện trên màn hình app đang mở. Giữ trang này mở khi làm việc.';
+    document.querySelector('p').textContent = 'Mỗi mã quét được sẽ gửi về app. Giữ trang này mở khi làm việc.';
+    document.getElementById('qtyBox').style.display = 'block';
   }
+  const qtyEl = document.getElementById('qty');
+  document.getElementById('qMinus').onclick = () => { qtyEl.value = Math.max(1, (Number(qtyEl.value) || 1) - 1); };
+  document.getElementById('qPlus').onclick = () => { qtyEl.value = (Number(qtyEl.value) || 1) + 1; };
+  function badBeep() { try { navigator.vibrate && navigator.vibrate([120, 80, 120]); } catch (e) {} }
   const out = document.getElementById('out');
   const list = document.getElementById('list');
   const btnLive = document.getElementById('live');
@@ -61,10 +74,15 @@
   function report(r) {
     if (CH) {
       if (!r.ok) return;
-      fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'scan', ch: CH, code: r.code }) })
+      const q = Math.max(1, Number(qtyEl.value) || 1);
+      qtyEl.value = 1;
+      fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'scan', ch: CH, code: r.code, qty: q }) })
         .then(res => res.json())
-        .then(j => { if (!j.ok) addToList('⚠️ ' + (j.error || 'Không gửi được')); })
-        .catch(e => addToList('⚠️ Không gửi được: ' + e.message));
+        .then(j => {
+          if (!j.ok) { badBeep(); show('⚠️ ' + (j.error || 'Không gửi được'), false); addToList('⚠️ ' + (j.error || 'Không gửi được')); }
+          else if (j.msg) { show(j.msg, j.warn ? false : true); addToList((j.warn ? '⚠️ ' : '✅ ') + j.msg); if (j.warn) badBeep(); }
+        })
+        .catch(e => { badBeep(); addToList('⚠️ Không gửi được: ' + e.message); });
       return;
     }
     r.action = 'cameraTest';
