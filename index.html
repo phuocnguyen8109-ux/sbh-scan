@@ -2,159 +2,210 @@
 <html lang="vi">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SBH – quét mã</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <meta name="theme-color" content="#1f3a5f">
+  <title>SBH – máy quét</title>
   <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
   <style>
-    body { font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 16px; max-width: 520px; color: #222; }
-    h3 { margin: 0 0 6px; }
-    p { margin: 0 0 8px; color: #555; }
-    button, label.btn { display: block; width: 100%; padding: 14px; margin: 10px 0; font-size: 16px; font-family: inherit;
-      border: 1px solid #888; border-radius: 10px; background: #f5f5f5; color: #222; text-align: center; box-sizing: border-box; }
-    button.primary { background: #1f6feb; border-color: #1f6feb; color: #fff; }
-    #reader { width: 100%; margin-top: 8px; border-radius: 10px; overflow: hidden; }
-    #out { margin-top: 12px; padding: 12px; border-radius: 10px; background: #f0efec; white-space: pre-wrap; }
-    .ok { background: #e5f4e4 !important; } .bad { background: #fbebeb !important; }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, system-ui, sans-serif; margin: 0; padding: 12px; max-width: 560px; color: #222; background: #f6f5f2; }
+    h3 { margin: 2px 0 4px; font-size: 18px; }
+    #who { font-size: 14px; color: #555; margin-bottom: 8px; }
+    button, label.btn { display: block; width: 100%; padding: 14px; margin: 8px 0; font-size: 17px; font-family: inherit; font-weight: 600;
+      border: 1px solid #999; border-radius: 12px; background: #fff; color: #222; text-align: center; }
+    button.primary { background: #1f3a5f; border-color: #1f3a5f; color: #fff; }
+    #reader { width: 100%; border-radius: 12px; overflow: hidden; background: #000; }
+    #out { margin: 10px 0; padding: 18px 14px; border-radius: 14px; background: #e9e7e2; font-size: 20px; font-weight: 700; line-height: 1.35;
+      white-space: pre-wrap; min-height: 84px; transition: background .15s; }
+    #out.ok { background: #1e8e3e; color: #fff; } #out.bad { background: #c5221f; color: #fff; } #out.wait { background: #f9ab00; color: #222; }
+    #out small { display: block; font-size: 14px; font-weight: 400; opacity: .9; margin-top: 4px; }
+    .row { display: flex; gap: 8px; align-items: center; }
+    .row > * { margin: 0; }
     input[type=file] { display: none; }
-    #list { margin-top: 12px; font-size: 14px; }
-    #list div { padding: 6px 0; border-bottom: 1px solid #eee; }
+    input.txt { flex: 1; font-size: 18px; padding: 12px; border: 1px solid #999; border-radius: 12px; min-width: 0; }
+    #qtyBox { display: none; margin: 8px 0; }
+    #qty { flex: 1; font-size: 22px; padding: 10px; text-align: center; border: 1px solid #999; border-radius: 12px; min-width: 0; }
+    #list { margin-top: 10px; font-size: 14px; background: #fff; border-radius: 12px; padding: 4px 10px; }
+    #list div { padding: 7px 0; border-bottom: 1px solid #eee; } #list div:last-child { border-bottom: none; }
+    .hint { font-size: 13px; color: #666; }
   </style>
 </head>
 <body>
-  <h3>SBH – thử quét mã</h3>
-  <p>Quét một hộp mỹ phẩm và một nhãn vận đơn 7-11/Family. Kết quả tự ghi vào tab Log trong SBH_CauHinh.</p>
+  <h3 id="title">SBH – máy quét</h3>
+  <div id="who">Đang kiểm tra kết nối…</div>
 
-  <button id="live" class="primary">Mở camera quét trực tiếp</button>
+  <div id="out">Bấm “Mở camera” rồi đưa mã vạch vào khung.</div>
+
+  <button id="live" class="primary">📷 Mở camera</button>
   <button id="stop" style="display:none">Tắt camera</button>
-  <label class="btn" for="photo">Dự phòng: chụp ảnh mã vạch</label>
+  <div id="reader"></div>
+
+  <div id="qtyBox">
+    <div class="hint" style="margin-bottom:6px">Số lượng cho lần quét tới (thùng nguyên đai: nhập số hộp trong thùng rồi quét 1 hộp)</div>
+    <div class="row"><button type="button" id="qMinus" style="width:64px">−</button><input id="qty" type="number" inputmode="numeric" min="1" value="1"><button type="button" id="qPlus" style="width:64px">+</button></div>
+  </div>
+
+  <div class="row" style="margin-top:8px">
+    <input id="manual" class="txt" inputmode="numeric" placeholder="Mã không quét được? Gõ ở đây">
+    <button id="send" style="width:auto;padding:12px 18px">Gửi</button>
+  </div>
+  <label class="btn" for="photo" style="font-weight:400">Dự phòng: chụp ảnh mã vạch</label>
   <input id="photo" type="file" accept="image/*" capture="environment">
 
-  <div id="qtyBox" style="display:none;margin:10px 0">
-    <div style="font-size:14px;color:#555;margin-bottom:6px">Số lượng cho lần quét tới (thùng nguyên đai: nhập số hộp trong thùng rồi quét 1 hộp)</div>
-    <div style="display:flex;gap:8px;align-items:center">
-      <button type="button" id="qMinus" style="width:64px;margin:0">−</button>
-      <input id="qty" type="number" inputmode="numeric" min="1" value="1" style="flex:1;font-size:22px;padding:10px;text-align:center;border:1px solid #888;border-radius:10px">
-      <button type="button" id="qPlus" style="width:64px;margin:0">+</button>
-    </div>
-  </div>
-  <div id="reader"></div>
-  <div id="out">Chưa quét.</div>
   <div id="list"></div>
+  <p class="hint">Giữ trang này mở khi làm việc. Màn hình sẽ không tự tắt khi camera đang mở.</p>
 
 <script>
-  // Link web app Apps Script (Triển khai → URL ứng dụng web). Trang này chỉ gửi kết quả quét thử, không đọc dữ liệu.
+  // Link web app Apps Script (Triển khai → URL ứng dụng web)
   const API_URL = 'https://script.google.com/macros/s/AKfycbyiJ2__5HzcRAV6soRF6TbNd3uAXkPi0EUYFkkyrjQ4jb8tT7Yh7nQ_upA5uduJnhFo/exec';
-
-  // Có ?ch=… (mở từ nút "Quét bằng ĐT" trong app) thì mã quét được gửi thẳng về app đang mở trên máy kia.
   const CH = new URLSearchParams(location.search).get('ch') || '';
-  if (CH) {
-    document.querySelector('h3').textContent = 'SBH – máy quét cho app';
-    document.querySelector('p').textContent = 'Mỗi mã quét được sẽ gửi về app. Giữ trang này mở khi làm việc.';
-    document.getElementById('qtyBox').style.display = 'block';
-  }
-  const qtyEl = document.getElementById('qty');
-  document.getElementById('qMinus').onclick = () => { qtyEl.value = Math.max(1, (Number(qtyEl.value) || 1) - 1); };
-  document.getElementById('qPlus').onclick = () => { qtyEl.value = (Number(qtyEl.value) || 1) + 1; };
-  function badBeep() { try { navigator.vibrate && navigator.vibrate([120, 80, 120]); } catch (e) {} }
-  const out = document.getElementById('out');
-  const list = document.getElementById('list');
-  const btnLive = document.getElementById('live');
-  const btnStop = document.getElementById('stop');
-  const F = Html5QrcodeSupportedFormats;
-  const formats = [F.EAN_13, F.EAN_8, F.CODE_128, F.CODE_39, F.UPC_A, F.QR_CODE];
-  const config = { formatsToSupport: formats, verbose: false, experimentalFeatures: { useBarCodeDetectorIfSupported: true } };
-  let scanner = null, running = false, lastCode = '', lastAt = 0;
+  const $ = id => document.getElementById(id);
+  const out = $('out'), list = $('list'), qtyEl = $('qty');
+  let TYPE = 'pair';
 
-  function show(text, ok) { out.textContent = text; out.className = ok ? 'ok' : (ok === false ? 'bad' : ''); }
+  /* ---------- âm thanh + rung ---------- */
+  let AC = null;
+  function audio() { try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch (e) {} return AC; }
+  function tone(ok) {
+    try { navigator.vibrate && navigator.vibrate(ok ? 70 : [220, 90, 220]); } catch (e) {}
+    const a = audio(); if (!a) return;
+    try {
+      const o = a.createOscillator(), g = a.createGain(), t = a.currentTime;
+      o.type = ok ? 'sine' : 'square'; o.frequency.value = ok ? 1300 : 220; g.gain.value = ok ? 0.25 : 0.35;
+      o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + (ok ? 0.12 : 0.45));
+    } catch (e) {}
+  }
+  function show(text, kind, sub) {
+    out.className = kind || '';
+    out.textContent = text;
+    if (sub) { const s = document.createElement('small'); s.textContent = sub; out.appendChild(s); }
+  }
   function addToList(text) {
     const d = document.createElement('div');
     d.textContent = new Date().toLocaleTimeString('vi-VN') + '  ' + text;
     list.prepend(d);
+    while (list.children.length > 15) list.lastChild.remove();
   }
-  function report(r) {
-    if (CH) {
-      if (!r.ok) return;
-      const q = Math.max(1, Number(qtyEl.value) || 1);
-      qtyEl.value = 1;
-      fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'scan', ch: CH, code: r.code, qty: q }) })
-        .then(res => res.json())
-        .then(j => {
-          if (!j.ok) { badBeep(); show('⚠️ ' + (j.error || 'Không gửi được'), false); addToList('⚠️ ' + (j.error || 'Không gửi được')); }
-          else if (j.msg) { show(j.msg, j.warn ? false : true); addToList((j.warn ? '⚠️ ' : '✅ ') + j.msg); if (j.warn) badBeep(); }
-        })
-        .catch(e => { badBeep(); addToList('⚠️ Không gửi được: ' + e.message); });
-      return;
-    }
-    r.action = 'cameraTest';
-    r.ua = navigator.userAgent;
-    fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(r) })
-      .then(res => res.json())
-      .then(j => { if (!j.ok) addToList('⚠️ Không ghi được Log: ' + (j.error || '')); })
-      .catch(e => addToList('⚠️ Không gửi được về Sheets: ' + e.message));
+
+  /* ---------- gọi app ---------- */
+  function post(body) {
+    return fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) }).then(r => r.json());
   }
-  function beep() {
-    try { navigator.vibrate && navigator.vibrate(80); } catch (e) {}
+  async function info() {
+    if (!CH) { $('who').textContent = 'Chế độ thử: mở trang này bằng mã QR trong app (nút “Quét bằng ĐT” hoặc khu đếm kho) để gửi mã về máy tính.'; return; }
     try {
-      const a = new (window.AudioContext || window.webkitAudioContext)();
-      const o = a.createOscillator(); o.frequency.value = 1200; o.connect(a.destination);
-      o.start(); setTimeout(() => { o.stop(); a.close(); }, 120);
+      const j = await post({ action: 'scanInfo', ch: CH });
+      if (!j.ok) { $('who').textContent = '⚠️ ' + (j.error || 'Kênh quét không dùng được'); show('Kênh quét đã hết hạn', 'bad', 'Trên máy tính bấm “Mã QR” để ghép lại, rồi quét mã mới.'); return; }
+      TYPE = j.type || 'pair';
+      if (TYPE === 'count') { $('title').textContent = 'SBH – đếm kho'; $('who').textContent = 'Khu ' + (j.zone || '') + (j.person ? ' · người đếm: ' + j.person : '') + '. Hộp giống nhau: nhập số lượng rồi quét 1 hộp.'; $('qtyBox').style.display = 'block'; }
+      else $('who').textContent = '📱 Đang nối với máy tính' + (j.by ? ' của ' + j.by : '') + '. Mã quét hiện trên máy tính, kết quả báo ở đây.';
+    } catch (e) { $('who').textContent = '⚠️ Chưa kết nối được (mạng?): ' + e.message; }
+  }
+
+  /* ---------- hàng đợi gửi: gửi lần lượt, mất mạng thì thử lại ---------- */
+  const queue = []; let sending = false;
+  function enqueue(code) {
+    const q = TYPE === 'count' ? Math.max(1, Number(qtyEl.value) || 1) : 1;
+    if (TYPE === 'count') qtyEl.value = 1;
+    queue.push({ code: code, qty: q, tries: 0 });
+    show(code, 'wait', 'Đang gửi…');
+    pump();
+  }
+  async function pump() {
+    if (sending || !queue.length) return;
+    sending = true;
+    const it = queue[0];
+    try {
+      const j = await post({ action: 'scan', ch: CH, code: it.code, qty: it.qty });
+      queue.shift();
+      if (!j.ok) { tone(false); show('✗ ' + it.code, 'bad', j.error || 'Không gửi được'); addToList('✗ ' + it.code + ' – ' + (j.error || '')); }
+      else if (j.msg) { const ok = !j.warn; tone(ok); show((ok ? '✓ ' : '⚠️ ') + j.msg, ok ? 'ok' : 'bad'); addToList((ok ? '✓ ' : '⚠️ ') + j.msg); }
+      else waitReply(it.code);
+    } catch (e) {
+      it.tries++;
+      if (it.tries >= 4) { queue.shift(); tone(false); show('✗ Chưa gửi được ' + it.code, 'bad', 'Mất mạng? Kiểm tra wifi/4G rồi quét lại.'); addToList('✗ chưa gửi ' + it.code); }
+      else { show(it.code, 'wait', 'Mạng chậm – đang gửi lại (' + it.tries + ')…'); await new Promise(r => setTimeout(r, 800 * Math.pow(2, it.tries - 1))); }
+    }
+    sending = false;
+    if (queue.length) pump();
+  }
+  /* ---------- chờ máy tính báo kết quả (ghép máy tính) ---------- */
+  const pendingReplies = {};
+  let replyTimer = null;
+  function waitReply(code) {
+    pendingReplies[code] = Date.now();
+    if (!replyTimer) replyTimer = setTimeout(pollReplies, 600);
+  }
+  async function pollReplies() {
+    replyTimer = null;
+    try {
+      const j = await post({ action: 'scanReplies', ch: CH });
+      (j.replies || []).forEach(r => {
+        delete pendingReplies[r.code];
+        tone(r.ok);
+        show((r.ok ? '✓ ' : '✗ ') + (r.msg || r.code), r.ok ? 'ok' : 'bad', r.msg && r.msg.indexOf(r.code) < 0 ? r.code : '');
+        addToList((r.ok ? '✓ ' : '✗ ') + (r.msg || r.code));
+      });
+    } catch (e) {}
+    const now = Date.now();
+    Object.keys(pendingReplies).forEach(c => {
+      if (now - pendingReplies[c] > 9000) { delete pendingReplies[c]; show(c, 'wait', 'Đã gửi – máy tính chưa phản hồi. Màn hình trên máy tính có đang mở không?'); addToList('… ' + c + ' (chưa phản hồi)'); }
+    });
+    if (Object.keys(pendingReplies).length) replyTimer = setTimeout(pollReplies, 700);
+  }
+
+  /* ---------- camera ---------- */
+  const F = Html5QrcodeSupportedFormats;
+  const config = { formatsToSupport: [F.EAN_13, F.EAN_8, F.CODE_128, F.CODE_39, F.UPC_A, F.QR_CODE], verbose: false, experimentalFeatures: { useBarCodeDetectorIfSupported: true } };
+  let scanner = null, running = false, lastCode = '', lastAt = 0, wake = null;
+  async function keepAwake(on) {
+    try {
+      if (on && 'wakeLock' in navigator) { wake = await navigator.wakeLock.request('screen'); }
+      else if (!on && wake) { await wake.release(); wake = null; }
     } catch (e) {}
   }
-
-  btnLive.onclick = async () => {
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && running) keepAwake(true); });
+  function onCode(text) {
+    const now = Date.now();
+    if (text === lastCode && now - lastAt < 1500) return;   // mã còn nằm trong khung: không gửi trùng
+    lastCode = text; lastAt = now;
+    if (!CH) { tone(true); show('✓ ' + text, 'ok', 'Chế độ thử – chưa gửi đi'); addToList(text); return; }
+    enqueue(text);
+  }
+  $('live').onclick = async () => {
+    audio();
     if (running) return;
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      show('Trình duyệt này không cho mở camera. Mở link bằng Safari hoặc Chrome (không mở trong Telegram/Zalo).', false);
-      report({ mode: 'live-gh', ok: false, error: 'no mediaDevices' });
-      return;
-    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { show('Trình duyệt này không mở được camera', 'bad', 'Mở link bằng Safari hoặc Chrome (không mở trong Telegram/Zalo).'); return; }
     try {
       scanner = scanner || new Html5Qrcode('reader', config);
-      await scanner.start({ facingMode: 'environment' }, { fps: 12, qrbox: { width: 280, height: 140 } },
-        (text, res) => {
-          const now = Date.now();
-          if (text === lastCode && now - lastAt < (CH ? 1200 : 2500)) return; // tránh ghi trùng khi mã còn trong khung
-          lastCode = text; lastAt = now;
-          const fmt = res && res.result && res.result.format ? res.result.format.formatName : '';
-          beep();
-          show('Camera trực tiếp chạy được ✅\nMã: ' + text + '\nLoại: ' + fmt, true);
-          addToList(text + ' (' + fmt + ')');
-          report({ mode: 'live-gh', ok: true, code: text, format: fmt });
-        }, () => {});
-      running = true;
-      btnLive.style.display = 'none'; btnStop.style.display = 'block';
-      show('Camera đang mở. Đưa mã vạch vào khung, giữ cách 10–20 cm.');
+      await scanner.start({ facingMode: 'environment' }, { fps: 12, qrbox: { width: 280, height: 140 } }, (text) => onCode(text), () => {});
+      running = true; keepAwake(true);
+      $('live').style.display = 'none'; $('stop').style.display = 'block';
+      show('Camera đang mở', '', 'Đưa mã vạch vào khung, cách 10–20 cm.');
     } catch (e) {
-      const msg = String(e && e.message ? e.message : e);
-      show('Không mở được camera: ' + msg + '\n\nNếu điện thoại hỏi quyền camera, chọn Cho phép. Trên iPhone: Cài đặt → Safari → Camera → Hỏi/Cho phép.', false);
-      report({ mode: 'live-gh', ok: false, error: msg });
+      show('Không mở được camera', 'bad', String(e && e.message ? e.message : e) + ' – nếu máy hỏi quyền camera, chọn Cho phép. iPhone: Cài đặt → Safari → Camera.');
     }
   };
-
-  btnStop.onclick = async () => {
+  $('stop').onclick = async () => {
     try { await scanner.stop(); } catch (e) {}
-    running = false;
-    btnStop.style.display = 'none'; btnLive.style.display = 'block';
+    running = false; keepAwake(false);
+    $('stop').style.display = 'none'; $('live').style.display = 'block';
     show('Đã tắt camera.');
   };
-
-  document.getElementById('photo').onchange = async (ev) => {
+  $('send').onclick = () => { audio(); const v = $('manual').value.trim(); if (!v) return; $('manual').value = ''; onCode(v); lastCode = ''; };
+  $('manual').addEventListener('keydown', e => { if (e.key === 'Enter') $('send').click(); });
+  $('qMinus').onclick = () => { qtyEl.value = Math.max(1, (Number(qtyEl.value) || 1) - 1); };
+  $('qPlus').onclick = () => { qtyEl.value = (Number(qtyEl.value) || 1) + 1; };
+  $('photo').onchange = async (ev) => {
+    audio();
     const file = ev.target.files && ev.target.files[0];
     if (!file) return;
-    if (running) { try { await scanner.stop(); } catch (e) {} running = false; btnStop.style.display = 'none'; btnLive.style.display = 'block'; }
-    try {
-      scanner = scanner || new Html5Qrcode('reader', config);
-      const text = await scanner.scanFile(file, false);
-      beep();
-      show('Chụp ảnh chạy được ✅\nMã: ' + text, true);
-      addToList(text + ' (ảnh)');
-      report({ mode: 'photo-gh', ok: true, code: text });
-    } catch (e) {
-      show('Không đọc được mã trong ảnh. Chụp gần hơn, đủ sáng, mã vạch nằm ngang rồi thử lại.', false);
-      report({ mode: 'photo-gh', ok: false, error: String(e && e.message ? e.message : e) });
-    }
+    if (running) { try { await scanner.stop(); } catch (e) {} running = false; keepAwake(false); $('stop').style.display = 'none'; $('live').style.display = 'block'; }
+    try { scanner = scanner || new Html5Qrcode('reader', config); const text = await scanner.scanFile(file, false); lastCode = ''; onCode(text); }
+    catch (e) { tone(false); show('Không đọc được mã trong ảnh', 'bad', 'Chụp gần hơn, đủ sáng, mã vạch nằm ngang rồi thử lại.'); }
     ev.target.value = '';
   };
+  info();
 </script>
 </body>
 </html>
